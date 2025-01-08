@@ -2,10 +2,15 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package ene.eneform.colours.wikipedia;
+package ene.eneform.colours.service;
 
+import ene.eneform.colours.domain.*;
+import ene.eneform.colours.repository.AdditionalRaceDataRepository;
+import ene.eneform.smartform.bos.AdditionalRaceInstance;
+import ene.eneform.smartform.factory.SmartformRunnerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
-import ene.eneform.colours.bos.AdditionalRaceData;
 import ene.eneform.colours.bos.ENEColoursDBEnvironment;
 import ene.eneform.colours.database.*;
 import ene.eneform.mero.colours.ENERacingColours;
@@ -13,11 +18,11 @@ import ene.eneform.mero.config.ENEColoursEnvironment;
 import ene.eneform.mero.factory.ENEMeroFactory;
 import ene.eneform.mero.factory.SVGFactoryUtils;
 import ene.eneform.mero.parse.ENEColoursParser;
-import ene.eneform.smartform.bos.AdditionalRaceInstance;
 import ene.eneform.smartform.bos.SmartformColoursRunner;
 import ene.eneform.smartform.bos.SmartformPrimaryOwnerColours;
-import ene.eneform.utils.ENEStatement;
 import ene.eneform.utils.FileUtils;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
 
 import java.io.FileNotFoundException;
@@ -35,7 +40,20 @@ import java.util.List;
  *
  * @author Simon
  */
-public class Wikipedia {
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class WikipediaService {
+
+    private final WikipediaImageService wikipediaImageService;
+    private final RacingColoursParseService rcpService;
+    private final AdditionalRaceLinkService arlService;
+    private final UnregisteredColourSyntaxService ucsService;
+    private final BasicRaceService raceService;
+    private final ColourRunnerService runnerService;
+        private final AdditionalRaceDataRepository ardRepository;
+    @Value("${ene.eneform.colours.svg_output_dir}")
+    private static String SVG_OUTPUT_DIRECTORY;
  
     private static String sm_strOpenHeader= "{{Jockey colours header$LINE_BREAK$| name = %s}}$LINE_BREAK$";
     private static String sm_strOpenFullHeader= "{{Jockey colours full header$LINE_BREAK$| name = %s}}$LINE_BREAK$";
@@ -48,12 +66,15 @@ public class Wikipedia {
     private static String sm_strRunnerTemplate="| image%1$d = File:Owner %2$s.svg$LINE_BREAK$| alt%1$d = %3$s$LINE_BREAK$| caption%1$d = %4$s$LINE_BREAK$";
     private static String sm_strFooter= "{{Jockey colours footer}}$LINE_BREAK$";
     private static final DateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
-    public static void generateRacePages(ENEStatement statement, String strWhere, boolean bRecreate)
+    private final ColourRunnerService colourRunnerService;
+
+    public void generateRacePages(String raceName, boolean bRecreate)
     {
-        ArrayList<AdditionalRaceData> alRaceData = AdditionalRaceDataFactory.createAdditionalRaceDataList(statement, strWhere, null);
-        for(int i = 0; i < alRaceData.size(); i++)
-        {
-            AdditionalRaceData ard = alRaceData.get(i);
+        AdditionalRaceData ard = ardRepository.findByName(raceName);
+        //List<AdditionalRaceData> alRaceData = ardRepository.findByName(raceName);
+    //    for(int i = 0; i < alRaceData.size(); i++)
+    //    {
+           // AdditionalRaceData ard = alRaceData.get(i);
             String strRegion = "UK";
             String strCountry = ard.getCountry();
             if ("Eire".equalsIgnoreCase(strCountry) || "Northern Ireland".equalsIgnoreCase(strCountry))
@@ -63,29 +84,31 @@ public class Wikipedia {
             if ("Flat".equalsIgnoreCase(strRaceType))
                 strType = "Flat";
             WikipediaFactory.generateRacePage(strRegion, strType, ard.getName(), bRecreate);
-        }
+ //       }
     }
       
 
-   public static String generateWikipediaOwner(ENEStatement statement, SmartformPrimaryOwnerColours owner, String strComment, String strLanguage, boolean bCompress, boolean bOverwrite) throws FileNotFoundException, UnsupportedEncodingException, IOException
+   public String generateWikipediaOwner(OwnerColours owner, String strComment, String strLanguage, boolean bCompress, boolean bOverwrite) throws FileNotFoundException, UnsupportedEncodingException, IOException
    {
-        String strOwnerName = getOwnerName(owner.getOwnerName()); 
+        String strOwnerName = getOwnerName(owner.getOwner());
         String strFileName = getOwnerFileName(strOwnerName);
-        ENERacingColours colours = ENEColoursEnvironment.getInstance().createRacingColours("en", ENEColoursEnvironment.getInstance().createJacket("en", owner.getJacketSyntax()), ENEColoursEnvironment.getInstance().createSleeves("en",owner.getSleevesSyntax()), ENEColoursEnvironment.getInstance().createCap("en",owner.getCapSyntax()));
+        ENERacingColours colours = ENEColoursEnvironment.getInstance().createRacingColours("en", ENEColoursEnvironment.getInstance().createJacket("en", owner.getJacket()),
+                ENEColoursEnvironment.getInstance().createSleeves("en",owner.getSleeves()),
+                ENEColoursEnvironment.getInstance().createCap("en",owner.getCap()));
         colours.setDescription(owner.getColours());        
-        createWikipediaImageFile(statement, strFileName, strOwnerName, colours, strComment, strLanguage, bCompress, bOverwrite);
+        createWikipediaImageFile(strFileName, strOwnerName, colours, strComment, strLanguage, bCompress, bOverwrite);
         return strOwnerName;
    }
  
-   public static String generateWikipediaOwner(ENEStatement statement, String strOwnerName, String strDescription, String strComment, String strLanguage, boolean bCompress, boolean bOverwrite) throws FileNotFoundException, UnsupportedEncodingException, IOException
+   public String generateWikipediaOwner(String strOwnerName, String strDescription, String strComment, String strLanguage, boolean bCompress, boolean bOverwrite) throws FileNotFoundException, UnsupportedEncodingException, IOException
    {
         strOwnerName = getOwnerName(strOwnerName);
         String strFileName = getOwnerFileName(strOwnerName);
-        ENERacingColours colours = ENERacingColoursFactory.createColours(statement, strLanguage, strDescription);
-        createWikipediaImageFile(statement, strFileName, strOwnerName, colours, strComment, strLanguage, bCompress, bOverwrite);
+        ENERacingColours colours = createColours(strLanguage, strDescription);
+        createWikipediaImageFile(strFileName, strOwnerName, colours, strComment, strLanguage, bCompress, bOverwrite);
         return strOwnerName;
    } 
-   public static String generateWikipediaOwner(ENEStatement statement, SmartformColoursRunner runner, String strLanguage) throws FileNotFoundException, UnsupportedEncodingException, IOException
+   public String generateWikipediaOwner(ColourRunner runner, String strLanguage) throws FileNotFoundException, UnsupportedEncodingException, IOException
    {
        String strPrimaryOwner = runner.getPrimaryOwner();   // use primary owner if exists i.e. if already record in Wikipedia_Images
        if ("".equals(strPrimaryOwner))
@@ -107,8 +130,8 @@ public class Wikipedia {
                 if (nJockeyColours == 0)
                 {
                     String strFileName = getOwnerFileName(strOwnerName);
-                    ENERacingColours colours = ENERacingColoursFactory.createRunnerColours(ENEColoursEnvironment.DEFAULT_LANGUAGE, runner);
-                    createWikipediaImageFile(statement, strFileName, strOwnerName, colours, "", strLanguage, true, false);  // compress but don't overwrite
+                    ENERacingColours colours = createRunnerColours(ENEColoursEnvironment.DEFAULT_LANGUAGE, runner);
+                    createWikipediaImageFile(strFileName, strOwnerName, colours, "", strLanguage, true, false);  // compress but don't overwrite
                 }
             }
             System.out.println("generateWikipediaOwner New: " + strOwnerName + "-" + strJockeyColours);
@@ -120,96 +143,96 @@ public class Wikipedia {
        return strPrimaryOwner;
    }
    
-   private static String getOwnerName(String strOwnerName)
+   private String getOwnerName(String strOwnerName)
    {
        return strOwnerName.trim().replace(" & ", " and ").replace("& ", " and ").replace("&", " and ").replace(" / ", " and ").replace("/ ", " and ").replace("/", " and ").replace(":", "-");      // remove bad chars for file name
    }
-   public static String getOwnerFileName(String strOwnerName)
+   public String getOwnerFileName(String strOwnerName)
    {
-        String strFullDirectory = ENEColoursEnvironment.getInstance().getVariable("SVG_OUTPUT_DIRECTORY") + ENEColoursEnvironment.getInstance().getVariable("SVG_IMAGE_PATH") + "wikipedia";
-        String strFileName = strFullDirectory + "/owners/owner_" + strOwnerName + ".svg";
+        String strFileName = SVG_OUTPUT_DIRECTORY + "/owners/owner_" + strOwnerName + ".svg";
         
        return strFileName;
    }
-    public static void createImageFile(String strFileName, ENERacingColours colours, String strLanguage, boolean bCompress, boolean bOverwrite) throws IOException
+    public void createImageFile(String strFileName, ENERacingColours colours, String strLanguage, boolean bCompress, boolean bOverwrite) throws IOException
     {
         Document document = (new ENEMeroFactory(colours, strLanguage)).generateSVGDocument("", 1, null);    // transparent background
         String strSVG = createImageContent(colours, strLanguage, bCompress);
         FileUtils.writeFile(strFileName, strSVG, StandardCharsets.ISO_8859_1, bOverwrite);
     }
-    public static String createImageContent(String strColours, String strLanguage, boolean bCompress) throws IOException
+    public String createImageContent(String strColours, String strLanguage, boolean bCompress) throws IOException
     {
         ENERacingColours colours = new ENEColoursParser("en", strColours, "").parse();
         return createImageContent(colours, strLanguage, bCompress);
     }
-    public static String createImageContent(ENEStatement statement, String strColours, String strLanguage, boolean bCompress) throws IOException
+    public String createImageContent2(String strColours, String strLanguage, boolean bCompress) throws IOException
     {
         // use database conenction to parse description
-        ENERacingColours colours = ENERacingColoursFactory.createColours(statement, strLanguage, strColours);
+        ENERacingColours colours = createColours(strLanguage, strColours);
         return createImageContent(colours, strLanguage, bCompress);
     }
-    public static String createImageContent(ENERacingColours colours, String strLanguage, boolean bCompress) throws IOException
+    public String createImageContent(ENERacingColours colours, String strLanguage, boolean bCompress) throws IOException
     {
         Document document = (new ENEMeroFactory(colours, strLanguage)).generateSVGDocument("", 1, null);    // transparent background
         String strSVG = SVGFactoryUtils.convertSVGNode2String(document, bCompress);
         return strSVG;
     }
-    public static void createWikipediaImageFile(ENEStatement statement, String strFileName, String strOwner, String strDescription, String strComment, String strLanguage, boolean bCompress, boolean bOverwrite) throws IOException
+    public void createWikipediaImageFile(String strFileName, String strOwner, String strDescription, String strComment, String strLanguage, boolean bCompress, boolean bOverwrite) throws IOException
     {
         // specific for wikipedia owners - generate image and add to wikipedia_images table
-        ENERacingColours colours = ENERacingColoursFactory.createColours(statement, strLanguage, strDescription);
+        ENERacingColours colours = createColours(strLanguage, strDescription);
         createImageFile(strFileName, colours, strLanguage, bCompress, bOverwrite);
 
-        if ((strOwner != null) && (!"".equals(strOwner)) && strOwner.indexOf("test") < 0)
-            WikipediaImagesFactory.insertWikipediaImage(statement, strOwner, colours.getJacket().getDefinition(), colours.getSleeves().getDefinition(), colours.getCap().getDefinition(), colours.getTitle(), strComment, true); // overwrite
+        if ((strOwner != null) && (!"".equals(strOwner)) && strOwner.indexOf("test") < 0) {
+            wikipediaImageService.insertWikipediaImage(strOwner, colours.getJacket().getDefinition(), colours.getSleeves().getDefinition(), colours.getCap().getDefinition(), colours.getTitle(), strComment, true);
+        }
     }
-    public static void createWikipediaImageFile(ENEStatement statement, String strFileName, String strOwner, ENERacingColours colours, String strComment, String strLanguage, boolean bCompress, boolean bOverwrite) throws IOException
+    public void createWikipediaImageFile(String strFileName, String strOwner, ENERacingColours colours, String strComment, String strLanguage, boolean bCompress, boolean bOverwrite) throws IOException
     {
         // specific for wikipedia owners - generate image and add to wikipedia_images table
         createImageFile(strFileName, colours, strLanguage, bCompress, bOverwrite);
 
         if ((strOwner != null) && (!"".equals(strOwner)) && strOwner.indexOf("test") < 0)
-            WikipediaImagesFactory.insertWikipediaImage(statement, strOwner, colours.getJacket().getDefinition(), colours.getSleeves().getDefinition(), colours.getCap().getDefinition(), colours.getTitle(), strComment, true); // overwrite
+            wikipediaImageService.insertWikipediaImage(strOwner, colours.getJacket().getDefinition(), colours.getSleeves().getDefinition(), colours.getCap().getDefinition(), colours.getTitle(), strComment, true); // overwrite
     } 
-    public static int generateMultipleOwnerColours(ENEStatement statement, String[] astrOwners, String strLanguage, boolean bCompress, boolean bReparse) throws FileNotFoundException, UnsupportedEncodingException, IOException
+    public int generateMultipleOwnerColours(String[] astrOwners, String strLanguage, boolean bCompress, boolean bReparse) throws FileNotFoundException, UnsupportedEncodingException, IOException
     {
          int nCount = 0;
            for(int i = 0; i < astrOwners.length; i++)
            {
-               generateOwnerColours(statement, astrOwners[i], strLanguage, bCompress, bReparse);
+               generateOwnerColours(astrOwners[i], strLanguage, bCompress, bReparse);
                nCount++;
             }
            return nCount;
     }
-    public static int generateOwnerColours(ENEStatement statement, String[] astrOwners, String strLanguage, boolean bCompress, boolean bReparse) throws FileNotFoundException, UnsupportedEncodingException, IOException
+    public int generateOwnerColours(String[] astrOwners, String strLanguage, boolean bCompress, boolean bReparse) throws FileNotFoundException, UnsupportedEncodingException, IOException
     {
         int nCount = 0;
         for(int i = 0; i < astrOwners.length; i++)
         {
-            boolean bSuccess = generateOwnerColours(statement, astrOwners[i], strLanguage, bCompress, bReparse);
+            boolean bSuccess = generateOwnerColours(astrOwners[i], strLanguage, bCompress, bReparse);
             nCount += (bSuccess ? 1 : 0);
         }
         return nCount;
     }
-    public static boolean generateOwnerColours(ENEStatement statement, String strOwner, String strLanguage, boolean bCompress, boolean bReparse) throws FileNotFoundException, UnsupportedEncodingException, IOException
+    public boolean generateOwnerColours(String strOwner, String strLanguage, boolean bCompress, boolean bReparse) throws FileNotFoundException, UnsupportedEncodingException, IOException
     {
         boolean bBackView = false;
-           ArrayList<SmartformPrimaryOwnerColours> alOwners = WikipediaImagesFactory.selectWikipediaOwners(statement, new String[]{strOwner});
+           List<WikipediaImage> alOwners = wikipediaImageService.selectWikipediaOwners(new String[]{strOwner});
            if (alOwners.size() == 0)
             return false;
 
-           SmartformPrimaryOwnerColours owner = alOwners.get(0);
-           String strOwnerName = owner.getOwnerName();
+           OwnerColours owner = alOwners.get(0);
+           String strOwnerName = owner.getOwner();
            String strDescription = owner.getColours();
            if (bReparse)        // don't accept WikipediaImages breakdown
            {
-                strOwnerName = generateWikipediaOwner(statement, strOwnerName, strDescription, "", strLanguage, bCompress, true);
+                strOwnerName = generateWikipediaOwner(strOwnerName, strDescription, "", strLanguage, bCompress, true);
            }
            else
            {
-                strOwnerName = generateWikipediaOwner(statement, owner, "", strLanguage, bCompress, true);
+                strOwnerName = generateWikipediaOwner(owner, "", strLanguage, bCompress, true);
                 if (strOwnerName != null)
-                    WikipediaImagesFactory.updateWikipediaImageTimestamp(statement, strOwnerName);
+                    wikipediaImageService.updateTimestamp(strOwnerName);
            }
 /*                 OutputStreamWriter writer = createOwnerWriter(strOwnerName, true);  // overwrite svg
                 if (writer != null)
@@ -230,22 +253,22 @@ public class Wikipedia {
      }
  
  
-   static public String generateHorseSequence(ENEStatement statement, String strHorse, String strBred, String strLanguage, String strLineBreak) {
+   public String generateHorseSequence(String strHorse, String strBred, String strLanguage, String strLineBreak) {
         // no id specified - retrieve from additional_race_link
-        List<AdditionalRaceInstance> aRaces = AdditionalRaceLinkFactory.getAdditionalRaceHorseLinks(statement, strHorse, strBred);
-        //WikipediaFactory.updateAdditionalRaceLink(statement, aRaces.get(0).getRace(), strDescription);
-         return generateHorseRaces123HTML(statement, strHorse, aRaces, strLanguage, strLineBreak);
+        List<BasicRace> aRaces = raceService.findByHorseAndBred(strHorse, strBred);
+        //WikipediaFactory.updateAdditionalRaceLink(aRaces.get(0).getRace(), strDescription);
+         return generateHorseRaces123HTML(strHorse, aRaces, strLanguage, strLineBreak);
     }
 
-   static public String generateRaceSequence(ENEStatement statement, String strDescription, String strLanguage, String strLineBreak) {
+   public String generateRaceSequence(String strDescription, String strLanguage, String strLineBreak) {
         // no id specified - retrieve from additional_race_link
-        List<AdditionalRaceInstance> aRaces = AdditionalRaceLinkFactory.getAdditionalRaceLinks(statement, strDescription);
-        //WikipediaFactory.updateAdditionalRaceLink(statement, aRaces.get(0).getRace(), strDescription);
-        AdditionalRaceData ard = ENEColoursDBEnvironment.getInstance().getAdditionalRaceData(strDescription);
-        return generateRaces123Wikipedia(statement, ard.getTitle(), aRaces, strLanguage, strLineBreak);
+        List<? extends BasicRaceInfo> aRaces = arlService.findByRaceName(strDescription);
+        //WikipediaFactory.updateAdditionalRaceLink(aRaces.get(0).getRace(), strDescription);
+        AdditionalRaceData ard = ardRepository.findByName(strDescription);
+        return generateRaces123Wikipedia(ard.getTitle(), aRaces, strLanguage, strLineBreak);
     }
     
-    static public String generateRace(ENEStatement statement, JSONObject obj, String strLanguage, String strLineBreak) {
+    public String generateRace(JSONObject obj, String strLanguage, String strLineBreak) {
         // JSONObject from web interface containing name, url, id, source, date attributes
         Date dt = null;
         try
@@ -257,35 +280,38 @@ public class Wikipedia {
         {
             return null;
         }
-        AdditionalRaceInstance arl = new AdditionalRaceInstance(obj.get("source").toString(), Integer.parseInt(obj.get("id").toString()), dt);
-        return generateSingleRace123Wikipedia(statement, arl, strLanguage, strLineBreak);
+        AdditionalRaceLink arl = AdditionalRaceLink.onCreate(obj.get("source").toString(),
+                Integer.parseInt(obj.get("id").toString()), null, dt.getYear());
+        return generateSingleRace123Wikipedia(arl, strLanguage, strLineBreak);
     }
-    static public String generateRace(ENEStatement statement, String strDescription, String strLanguage, String strLineBreak) {
+    public String generateRace(String strDescription, String strLanguage, String strLineBreak) {
         // no id specified - retrieve latest from additional_race_link - looks in both SF and SL 
-        AdditionalRaceInstance arl = AdditionalRaceLinkFactory.getLatestAdditionalRaceLink(statement, strDescription);
-        return generateSingleRace123Wikipedia(statement, arl, strLanguage, strLineBreak);
+        AdditionalRaceLink arl = arlService.findLatestByRaceName(strDescription);
+        return generateSingleRace123Wikipedia(arl, strLanguage, strLineBreak);
     }
-    static public String generateRace(ENEStatement statement, int nRace, String strSource, String strLanguage, String strLineBreak) {
-        AdditionalRaceInstance arl = AdditionalRaceLinkFactory.getAdditionalRaceLinkObject(statement, nRace, strSource);
-       AdditionalRaceData ard = AdditionalRaceDataFactory.createAdditionalRaceData(statement, nRace, strSource);
-       return generateSingleRace123Wikipedia(statement, arl, strLanguage, strLineBreak);
+    public String generateRace(int nRace, String strSource, String strLanguage, String strLineBreak) {
+        BasicRace arl = raceService.findById(strSource, nRace);
+       return generateSingleRace123Wikipedia(arl, strLanguage, strLineBreak);
     }
-   static public String generateRace(ENEStatement statement, String strDescription, int nYear, String strLanguage, String strLineBreak) {
+   public String generateRace(String strDescription, int nYear, String strLanguage, String strLineBreak) {
         // no id specified - retrieve from additiona_race_link for given year
        // SmartForm only
        String strRaceContent="";
-        AdditionalRaceInstance arl = AdditionalRaceLinkFactory.getYearAdditionalRaceLink(statement, strDescription, nYear);
-         if (arl != null)
-            strRaceContent = generateSingleRace123Wikipedia(statement, arl, strLanguage, strLineBreak);
-        else
-            System.out.println("generateRace not found for: " + strDescription + "-" + nYear);
-        
+        List<AdditionalRaceLink> arl = arlService.findByRaceNameAndYear(strDescription, nYear);
+        if (arl.isEmpty()) {
+            log.info("generateRace not found for: " + strDescription + "-" + nYear);
+        } else {
+            for (AdditionalRaceLink additionalRaceLink : arl) {
+                strRaceContent += generateSingleRace123Wikipedia(additionalRaceLink, strLanguage, strLineBreak);
+            }
+        }
+
         return strRaceContent;
     }
-   // Seperate image for each runner
+   // Separate image for each runner
    
  
-    public static String generateRaceRunnerTriplet(ENEStatement statement, ArrayList<SmartformColoursRunner> alRunners, String strTitle, String strLineBreak)
+    public String generateRaceRunnerTriplet(List<ColourRunner> alRunners, String strTitle, String strLineBreak)
     {
         String strContent="";
         String strRowHeader = sm_strRowHeader.replace("$LINE_BREAK$", strLineBreak);
@@ -301,8 +327,8 @@ public class Wikipedia {
                 nPlaces = alRunners.size();
             for(int i = 0; i < nPlaces; i++)
             {
-                 SmartformColoursRunner runner =  alRunners.get(i);
-                 String strFileName = generateWikipediaOwner(statement, runner, ENEColoursEnvironment.DEFAULT_LANGUAGE);
+                 ColourRunner runner =  alRunners.get(i);
+                 String strFileName = generateWikipediaOwner(runner, ENEColoursEnvironment.DEFAULT_LANGUAGE);
                  String strName = runner.getName().trim();
                  if ((strName.length() >= 17) && (strName.indexOf(" ") <= 0))
                         strName = ("<small>" + strName + "</small>");
@@ -316,7 +342,7 @@ public class Wikipedia {
         }
         return strContent;
     }
-    public static String generateRaces123Wikipedia(ENEStatement statement, String strTitle, List<AdditionalRaceInstance> aRaces, String strLanguage, String strLineBreak)
+    public String generateRaces123Wikipedia(String strTitle, List<? extends BasicRaceInfo> aRaces, String strLanguage, String strLineBreak)
     {
         String strContent="";
         String strOpenHeader = sm_strOpenHeader.replace("$LINE_BREAK$", strLineBreak);
@@ -328,8 +354,7 @@ public class Wikipedia {
         int nRaces = aRaces.size();
         for(int i = 0; i < nRaces; i++)
         {
-            AdditionalRaceInstance race = aRaces.get(i);
-            String strYear = race.getYearString();
+            BasicRaceInfo race = aRaces.get(i);
             int nYear = race.getYear();
             if (i == 0)
             {
@@ -357,7 +382,7 @@ public class Wikipedia {
                 strContent += String.format(strNamedCollapsibleHeader, "1990-1988");
             }
             
-            strContent += generateRace123Wikipedia(statement, race, String.valueOf(race.getYear()), strLanguage, strLineBreak);
+            strContent += generateRace123Wikipedia(race, String.valueOf(race.getYear()), strLanguage, strLineBreak);
             
             if (i == 0)
             {
@@ -368,17 +393,17 @@ public class Wikipedia {
         
         return strContent;
     }
-public static String generateSingleRace123Wikipedia(ENEStatement statement, AdditionalRaceInstance race, String strLanguage, String strLineBreak)
+public String generateSingleRace123Wikipedia(BasicRaceInfo race, String strLanguage, String strLineBreak)
 {
        String strContent = "";
        //strContent += ("--" + racedata.getCourse() + " - " + racedata.getTitle()  + strLineBreak);
         
-       strContent += generateRace123Wikipedia(statement, race, race.getYearString(), strLanguage, strLineBreak);
+       strContent += generateRace123Wikipedia(race, race.getYear().toString(), strLanguage, strLineBreak);
        
        return strContent;
 }
 
-public static String generateRace123Wikipedia(ENEStatement statement, AdditionalRaceInstance race, String strTitle, String strLanguage, String strLineBreak)
+public String generateRace123Wikipedia(BasicRaceInfo race, String strTitle, String strLanguage, String strLineBreak)
     {
     String strContent="";
     String strRowHeader = sm_strRowHeader.replace("$LINE_BREAK$", strLineBreak);
@@ -387,7 +412,7 @@ public static String generateRace123Wikipedia(ENEStatement statement, Additional
     try
     {
          strContent += String.format(strRowHeader, strTitle);
-        ArrayList<SmartformColoursRunner> alDailyRunners = ENEColoursRunnerFactory.getSmartformRaceRunners(statement, race, 3);
+        List<ColourRunner> alDailyRunners = colourRunnerService.findByRaceAndNumRunners(race, 3);
 
         // to do: add "Only 2 finished/ran"
         int nPlaces = 3;
@@ -395,8 +420,8 @@ public static String generateRace123Wikipedia(ENEStatement statement, Additional
             nPlaces = alDailyRunners.size();
         for(int i = 0; i < nPlaces; i++)
         {
-             SmartformColoursRunner runner =  alDailyRunners.get(i);
-             String strFileName = generateWikipediaOwner(statement, runner, strLanguage);
+             ColourRunner runner =  alDailyRunners.get(i);
+             String strFileName = generateWikipediaOwner(runner, strLanguage);
              String strName = runner.getName().trim();
              if ((strName.length() >= 17) && (strName.indexOf(" ") <= 0))
                     strName = ("<small>" + strName + "</small>");
@@ -412,7 +437,7 @@ public static String generateRace123Wikipedia(ENEStatement statement, Additional
     //System.out.println(strContent);
     return strContent;
 }       
-public static String generateHorseRaces123HTML(ENEStatement statement, String strTitle, List<AdditionalRaceInstance> aRaces, String strLanguage, String strLineBreak)
+public String generateHorseRaces123HTML(String strTitle, List<BasicRace> aRaces, String strLanguage, String strLineBreak)
 {
         
         String strHorseHeader="<h1>%s</h1>$LINE_BREAK$".replace("$LINE_BREAK$", strLineBreak);
@@ -432,7 +457,7 @@ public static String generateHorseRaces123HTML(ENEStatement statement, String st
         String strCurrentSeason="";
         for(int i = 0; i < nRaces; i++)
         {
-            AdditionalRaceInstance race = aRaces.get(i);
+            BasicRace race = aRaces.get(i);
             String strSeason = race.getSeasonString();
             if(!strSeason.equals(strCurrentSeason))
             {
@@ -444,14 +469,14 @@ public static String generateHorseRaces123HTML(ENEStatement statement, String st
                 strCurrentSeason = strSeason;
             }
             
-            strContent += generateRace123HTML(statement, race, race.getAbbreviatedTitle() + "<br />" + race.getCourse() + ", " + race.getFormattedDistance() + " - " + race.getFormattedMeetingDate("MMMM d") , strLanguage, strLineBreak, strTitle);
+            strContent += generateRace123HTML(race, race.getAbbreviatedTitle() + "<br />" + race.getCourse() + ", " + race.getFormattedDistance() + " - " + race.getFormattedMeetingDate("MMMM d") , strLanguage, strLineBreak, strTitle);
         }
         //strContent += strRowClose + strTableClose;
         
         return strContent;
 }
 
-public static String generateRace123HTML(ENEStatement statement, AdditionalRaceInstance race, String strTitle, String strLanguage, String strLineBreak, String strHorse)
+public String generateRace123HTML(BasicRace race, String strTitle, String strLanguage, String strLineBreak, String strHorse)
 {
     String strContent="";
     String strRaceTable="<table cellpadding=\"0\" cellspacing=\"0\" style=\"clear:right; float:right; text-align:center; font-weight:bold; width:100%;\">$LINE_BREAK$".replace("$LINE_BREAK$", strLineBreak);
@@ -474,7 +499,7 @@ public static String generateRace123HTML(ENEStatement statement, AdditionalRaceI
         int nGroupRace = race.getGroupRace();
         String strTitleBackgroundColour = astrBackgroundColours[nGroupRace];
         strContent += (String.format(strDivOpen, 7) + strRaceTable + strRowOpen + String.format(strRaceTitleCell, strTitleBackgroundColour, strTitle) + strRowClose);            // 1st Row
-        ArrayList<SmartformColoursRunner> alDailyRunners = ENEColoursRunnerFactory.getSmartformRaceRunners(statement, race, 3);
+        List<ColourRunner> alDailyRunners = runnerService.findByRaceAndNumRunners(race, 3);
 
         // to do: add "Only 2 finished/ran"
         int nPlaces = 3;
@@ -484,10 +509,10 @@ public static String generateRace123HTML(ENEStatement statement, AdditionalRaceI
         strContent += strRowOpen;
         for(int i = 0; i < nPlaces; i++)        // 2nd Row
         {
-            SmartformColoursRunner runner =  alDailyRunners.get(i);
+            ColourRunner runner =  alDailyRunners.get(i);
             String strName = runner.getName().trim();
             String strBackgroundColour = strName.equalsIgnoreCase(strHorse) ? "#eee9e9" : "white";
-             String strFileName = generateWikipediaOwner(statement, runner, strLanguage).replace(" & ", " and ");
+             String strFileName = generateWikipediaOwner(runner, strLanguage).replace(" & ", " and ");
              if (i == 0)
                 strContent += String.format(strJockeyColoursCell1.replace("$BACKGROUND_COLOUR$", strBackgroundColour), strFileName, strFileName);
              else
@@ -500,7 +525,7 @@ public static String generateRace123HTML(ENEStatement statement, AdditionalRaceI
         strContent += strHorseRowOpen;
         for(int i = 0; i < nPlaces; i++)        // 3rd Row
         {
-             SmartformColoursRunner runner =  alDailyRunners.get(i);
+             ColourRunner runner =  alDailyRunners.get(i);
              String strName = runner.getName().trim();
              String strBackgroundColour = strName.equalsIgnoreCase(strHorse) ? "#eee9e9" : "white";
              int nSize = 85;
@@ -529,5 +554,50 @@ public static String generateRace123HTML(ENEStatement statement, AdditionalRaceI
     return strContent;
 }       
 
- 
+ // new
+ public ENERacingColours createRunnerColours(String strLanguage, ColourRunner runner)
+ {
+     return createRunnerColours(strLanguage, runner, SmartformRunnerFactory.sm_RCPVersion);
+ }
+    public ENERacingColours createRunnerColours(String strLanguage, ColourRunner runner, String strVersion)
+    {
+        ENERacingColours colours = null;
+        if (runner != null)
+        {
+            // runner.getUnregisteredColourSyntax()
+            colours = createRacingColours(null, strLanguage, runner.getJockeyColours(), strVersion);
+        }
+
+        return colours;
+    }
+
+    public ENERacingColours createColours(String strLanguage, String strJockeyColours)
+    {
+        return createColours(strLanguage, strJockeyColours, SmartformRunnerFactory.sm_RCPVersion);
+    }
+    public ENERacingColours createColours(String strLanguage, String strJockeyColours, String strVersion)
+    {
+        // first try wikipedia_images
+        // then unregistered_colour_syntax
+        UnregisteredColourSyntax ucs = ucsService.findByColours(strJockeyColours);
+        return createRacingColours(ucs, strLanguage, strJockeyColours, strVersion);
+    }
+
+    public ENERacingColours createRacingColours(UnregisteredColourSyntax ucs, String strLanguage, String strJockeyColours, String strVersion) {
+        ENERacingColours colours = null;
+        if (ucs != null) {
+            colours = ENEColoursEnvironment.getInstance().createRacingColours(strLanguage, ENEColoursEnvironment.getInstance().createJacket(strLanguage, ucs.getJacket()),
+                    ENEColoursEnvironment.getInstance().createSleeves(strLanguage, ucs.getSleeves()),
+                    ENEColoursEnvironment.getInstance().createCap(strLanguage, ucs.getCap()));
+            colours.setDescription(strJockeyColours);
+            rcpService.insertRacingColoursParse(strVersion, colours, "", "", "");
+        } else {
+            ENEColoursParser parser = new ENEColoursParser(strLanguage, strJockeyColours, "");
+            colours = parser.parse();
+
+            rcpService.insertRacingColoursParse(strVersion, colours, parser.getRemainder(), parser.getExpanded(), parser.getSyntax());
+        }
+        return colours;
+    }
+
 }

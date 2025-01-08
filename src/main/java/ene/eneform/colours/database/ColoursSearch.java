@@ -5,6 +5,8 @@
 
 package ene.eneform.colours.database;
 
+import ene.eneform.colours.service.WikipediaService;
+import lombok.RequiredArgsConstructor;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import ene.eneform.colours.bos.ENEOwnerColours;
@@ -12,6 +14,7 @@ import ene.eneform.colours.bos.ENETopRaceWinner;
 import ene.eneform.utils.DbUtils;
 import ene.eneform.utils.ENEStatement;
 import ene.eneform.utils.StringUtils;
+import org.springframework.stereotype.Service;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -22,10 +25,14 @@ import java.util.Iterator;
  *
  * @author Simon
  */
+@Service
+@RequiredArgsConstructor
 public class ColoursSearch {
-private static String sm_strDisplayNameDefn = "case when ro_display_name is null or ro_display_name='' then replace(trim(concat(ro_title, ' ', ro_first_name, ' ', ro_family_name, ' ', ro_suffix)),'  ', ' ') else ro_display_name end";
 
-public static JSONObject searchTopRacesOwnersJSON(ENEStatement statement, String strOwnerAttribute, String strWhere, String strOrder, int nPageSize, int nMatches, int nFirst, boolean bAscending, boolean bOwners)
+    private final ENETopRacesFactory eneTopRacesFactory;
+private String sm_strDisplayNameDefn = "case when ro_display_name is null or ro_display_name='' then replace(trim(concat(ro_title, ' ', ro_first_name, ' ', ro_family_name, ' ', ro_suffix)),'  ', ' ') else ro_display_name end";
+
+public JSONObject searchTopRacesOwnersJSON(ENEStatement statement, String strOwnerAttribute, String strWhere, String strOrder, int nPageSize, int nMatches, int nFirst, boolean bAscending, boolean bOwners)
 {
     int nLast = 0;
     ArrayList<ENETopRaceWinner> list = null;
@@ -34,14 +41,14 @@ public static JSONObject searchTopRacesOwnersJSON(ENEStatement statement, String
         if (bOwners)
              nMatches = ENETopRacesOwnerFactory.countOwnerColours(statement, strWhere);
         else
-            nMatches = ENETopRacesFactory.countTopRaceWinners(statement, strWhere);
+            nMatches = eneTopRacesFactory.countTopRaceWinners(statement, strWhere);
         
          if (nMatches > 0)
          {
             if (bOwners)
                 list = ENETopRacesOwnerFactory.findOwnerColours(statement, strWhere, 0, nPageSize);
             else
-                list = ENETopRacesFactory.getTopRaceWinners(statement, strWhere, bAscending, 0, nPageSize);
+                list = eneTopRacesFactory.getTopRaceWinners(statement, strWhere, bAscending, 0, nPageSize);
             nLast = (nMatches < nFirst + nPageSize) ? nMatches : nFirst + nPageSize - 1;
          }
          else
@@ -57,7 +64,7 @@ public static JSONObject searchTopRacesOwnersJSON(ENEStatement statement, String
         if (bOwners)
             list = ENETopRacesOwnerFactory.findOwnerColours(statement, strWhere, nFirst - 1, nPageSize);
         else
-            list = ENETopRacesFactory.getTopRaceWinners(statement, strWhere, bAscending, nFirst - 1, nPageSize);
+            list = eneTopRacesFactory.getTopRaceWinners(statement, strWhere, bAscending, nFirst - 1, nPageSize);
         nLast = (nMatches < nFirst + nPageSize) ? nMatches : nFirst + nPageSize - 1;
     }
 
@@ -90,17 +97,17 @@ public static JSONObject searchTopRacesOwnersJSON(ENEStatement statement, String
     
     return objSearch;
 }
-public static JSONObject searchOwnersJSON(ENEStatement statement, String strOwnerAttribute, String strWhere, String strOrder, int nPageSize, int nMatches, int nFirst)
+public JSONObject searchOwnersJSON(ENEStatement statement, String strOwnerAttribute, String strWhere, String strOrder, int nPageSize, int nMatches, int nFirst)
 {
     int nLast = 0;
     ArrayList<ENEOwnerColours> list = null;
     if (nMatches == -1)
     {
-         nMatches = ColoursSearch.countOwnerColours(statement, strWhere);
+         nMatches = countOwnerColours(statement, strWhere);
         
          if (nMatches > 0)
          {
-            list = ColoursSearch.findOwnerColours(statement, strWhere, strOwnerAttribute, strOrder, 0, nPageSize);
+            list = findOwnerColours(statement, strWhere, strOwnerAttribute, strOrder, 0, nPageSize);
             nLast = (nMatches < nFirst + nPageSize) ? nMatches : nFirst + nPageSize - 1;
          }
          else
@@ -113,7 +120,7 @@ public static JSONObject searchOwnersJSON(ENEStatement statement, String strOwne
     else
     {
         // this is a next or previous, so retrieve first
-        list = ColoursSearch.findOwnerColours(statement, strWhere, strOwnerAttribute, strOrder, nFirst - 1, nPageSize);
+        list = findOwnerColours(statement, strWhere, strOwnerAttribute, strOrder, nFirst - 1, nPageSize);
         nLast = (nMatches < nFirst + nPageSize) ? nMatches : nFirst + nPageSize - 1;
     }
 
@@ -148,7 +155,7 @@ public static JSONObject searchOwnersJSON(ENEStatement statement, String strOwne
     
     return objSearch;
 }
-public static JSONObject getColourSearchJSON(ENEStatement statement, String strOwnerAttribute, String strOwnerSearch, String ss_op, String strColoursSearch, String cs_op, String strOrganisation, String strOrgType, int nYear, int nPageSize, int nMatches, int nFirst, int nRace, boolean bAscending)
+public JSONObject getColourSearchJSON(ENEStatement statement, String strOwnerAttribute, String strOwnerSearch, String ss_op, String strColoursSearch, String cs_op, String strOrganisation, String strOrgType, int nYear, int nPageSize, int nMatches, int nFirst, int nRace, boolean bAscending)
 {
     if ((strOwnerAttribute == null) || ("".equals(strOwnerAttribute)))
         strOwnerAttribute = "ro_display_name";
@@ -187,13 +194,13 @@ public static JSONObject getColourSearchJSON(ENEStatement statement, String strO
     }
     else if ("top_race_winner".equals(strOrganisation))
     {
-        String strWhere = ENETopRacesFactory.getTopRaceWinnersWhereClause(nRace);
+        String strWhere = eneTopRacesFactory.getTopRaceWinnersWhereClause(nRace);
         // need bAscending
         return searchTopRacesOwnersJSON(statement, strOwnerAttribute, strWhere, "", nPageSize, nMatches, nFirst, bAscending, false);
     }
     else
     {
-    String strWhere = ColoursSearch.getOwnerColoursWhereClause(
+    String strWhere = getOwnerColoursWhereClause(
             strOwnerAttribute,
             strOwnerSearch,
             strColoursSearch,
@@ -201,7 +208,7 @@ public static JSONObject getColourSearchJSON(ENEStatement statement, String strO
             strOrgType,
             nYear);
 
-   String strOrder = ColoursSearch.getOwnerColoursOrderClause(
+   String strOrder = getOwnerColoursOrderClause(
             strOwnerAttribute,
             strOwnerSearch,
             strColoursSearch,
@@ -211,7 +218,7 @@ public static JSONObject getColourSearchJSON(ENEStatement statement, String strO
         return searchOwnersJSON(statement, strOwnerAttribute, strWhere, strOrder, nPageSize, nMatches, nFirst);
     }
 }
-    public static String getOwnerColoursOrderClause(String strOwnerAttribute, String strOwner, String strColours, String strOrganisation, String strOrgType, int nYear)
+    public String getOwnerColoursOrderClause(String strOwnerAttribute, String strOwner, String strColours, String strOrganisation, String strOrgType, int nYear)
     {
        if ("ro_display_name".equals(strOwnerAttribute))
        {
@@ -236,7 +243,7 @@ public static JSONObject getColourSearchJSON(ENEStatement statement, String strO
 
        return strOrder;
     }
-    public static String getOwnerColoursWhereClause(String strOwnerAttribute, String strOwner, String strColours, String strOrganisation, String strOrgType, int nYear)
+    public String getOwnerColoursWhereClause(String strOwnerAttribute, String strOwner, String strColours, String strOrganisation, String strOrgType, int nYear)
     {
         if (strOwner.indexOf("'") >= 0)
             strOwner = strOwner.replace("'", "''");
@@ -306,7 +313,7 @@ public static JSONObject getColourSearchJSON(ENEStatement statement, String strO
 
        return strWhere;
     }
-    public static int countOwnerColours(ENEStatement statement, String strWhere)
+    public int countOwnerColours(ENEStatement statement, String strWhere)
     {
         // two possibilities: 1) a name 3) a wildcard search
         ArrayList<ENEOwnerColours> list = new ArrayList<ENEOwnerColours>();
@@ -334,12 +341,12 @@ public static JSONObject getColourSearchJSON(ENEStatement statement, String strO
 
          return nCount;
     }
-    public static ArrayList<ENEOwnerColours> findOwnerColours(ENEStatement statement, String strWhere, String strOwnerAttribute, String strOrder, int nStart, int nMaxLimit)
+    public ArrayList<ENEOwnerColours> findOwnerColours(ENEStatement statement, String strWhere, String strOwnerAttribute, String strOrder, int nStart, int nMaxLimit)
     {
         return findOwnerColours(statement, strWhere, strOwnerAttribute, strOrder, nStart, nMaxLimit, false);
     }
 
-   public static ArrayList<ENEOwnerColours> findOwnerColours(ENEStatement statement, String strWhere, String strOwnerAttribute, String strOrder, int nStart, int nMaxLimit, boolean bSyntaxOnly)
+   public ArrayList<ENEOwnerColours> findOwnerColours(ENEStatement statement, String strWhere, String strOwnerAttribute, String strOrder, int nStart, int nMaxLimit, boolean bSyntaxOnly)
     {
         // 20120917 - Add join to Syntax table - make inner join for now (testing only)
         // two possibilities: 1) a name 3) a wildcard search

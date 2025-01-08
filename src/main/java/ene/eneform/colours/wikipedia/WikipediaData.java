@@ -4,8 +4,11 @@
  */
 package ene.eneform.colours.wikipedia;
 
+import ene.eneform.colours.service.WikipediaService;
 import ene.eneform.mero.config.ENEColoursEnvironment;
 import ene.eneform.utils.ENEStatement;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 import java.io.*;
 import java.text.SimpleDateFormat;
@@ -15,9 +18,12 @@ import java.util.Date;
  *
  * @author Simon
  */
+@Service
+@RequiredArgsConstructor
 public class WikipediaData {
-    private static String sm_strTranscript = "";
-    public static void runWP(ENEStatement statement) throws FileNotFoundException, UnsupportedEncodingException, IOException
+    private final WikipediaService wikipediaService;
+    private String sm_strTranscript = "";
+    public void runWP(ENEStatement statement) throws FileNotFoundException, UnsupportedEncodingException, IOException
     {
        sm_strTranscript = "";
        
@@ -38,12 +44,12 @@ public class WikipediaData {
             writer.close();
        }
    } 
-   public static void addToTranscript(String strTranscript)
+   public void addToTranscript(String strTranscript)
    {
        sm_strTranscript += strTranscript + "\r\n\r\n";
    }
 
-    public static void generateWikipediaData(ENEStatement statement) throws FileNotFoundException, UnsupportedEncodingException, IOException
+    public void generateWikipediaData(ENEStatement statement) throws FileNotFoundException, UnsupportedEncodingException, IOException
    {
          //generateWikipediaBreedersCup(statement);
        //Wikipedia.generateWikipediaOwner(statement, "Kenneth L and Sarah K Ramsey", "white:'r'-red", "red", "red:'r'-white", "White, red 'r', red sleeves, white armlet, red cap, white 'r'");
@@ -89,25 +95,25 @@ public class WikipediaData {
       
        //generateWikipediaIreland2014(statement);
    }   
-    static private void generateHorseSequence(ENEStatement statement, String strHorse, String strBred) {
-        addToTranscript(Wikipedia.generateHorseSequence(statement, strHorse, strBred, ENEColoursEnvironment.DEFAULT_LANGUAGE, "\r\n"));
+    private void generateHorseSequence(ENEStatement statement, String strHorse, String strBred) {
+        addToTranscript(wikipediaService.generateHorseSequence(strHorse, strBred, ENEColoursEnvironment.DEFAULT_LANGUAGE, "\r\n"));
     }
 
-    static private void generateRaceSequence(ENEStatement statement, String strDescription) {
-        addToTranscript(Wikipedia.generateRaceSequence(statement, strDescription, ENEColoursEnvironment.DEFAULT_LANGUAGE, "\r\n"));
+    private void generateRaceSequence(ENEStatement statement, String strDescription) {
+        addToTranscript(wikipediaService.generateRaceSequence(strDescription, ENEColoursEnvironment.DEFAULT_LANGUAGE, "\r\n"));
     }
 
-    static private void generateRace(ENEStatement statement, String strDescription) {
-         addToTranscript(Wikipedia.generateRace(statement, strDescription, ENEColoursEnvironment.DEFAULT_LANGUAGE, "\r\n"));
+    private void generateRace(ENEStatement statement, String strDescription) {
+         addToTranscript(wikipediaService.generateRace(strDescription, ENEColoursEnvironment.DEFAULT_LANGUAGE, "\r\n"));
     }
-    static private void generateRace(ENEStatement statement, int nRace) {
-         addToTranscript(Wikipedia.generateRace(statement, nRace, "SF", ENEColoursEnvironment.DEFAULT_LANGUAGE, "\r\n"));   // Assume Smartform
+    private void generateRace(ENEStatement statement, int nRace) {
+         addToTranscript(wikipediaService.generateRace(nRace, "SF", ENEColoursEnvironment.DEFAULT_LANGUAGE, "\r\n"));   // Assume Smartform
     }
-    static private void generateRace(ENEStatement statement, String strDescription, int nYear) {
-         addToTranscript(Wikipedia.generateRace(statement, strDescription, nYear, ENEColoursEnvironment.DEFAULT_LANGUAGE, "\r\n"));
+    private void generateRace(ENEStatement statement, String strDescription, int nYear) {
+         addToTranscript(wikipediaService.generateRace(strDescription, nYear, ENEColoursEnvironment.DEFAULT_LANGUAGE, "\r\n"));
     }
 
-    static private void generateRace(ENEStatement statement, int nRace, String strDescription) {
-         addToTranscript(Wikipedia.generateRace(statement, nRace, strDescription, ENEColoursEnvironment.DEFAULT_LANGUAGE, "\r\n"));
+    private void generateRace(ENEStatement statement, int nRace, String strDescription) {
+         addToTranscript(wikipediaService.generateRace(nRace, strDescription, ENEColoursEnvironment.DEFAULT_LANGUAGE, "\r\n"));
     }
  }

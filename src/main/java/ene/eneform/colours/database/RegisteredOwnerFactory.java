@@ -7,13 +7,15 @@ package ene.eneform.colours.database;
 import ene.eneform.colours.bos.ENEOwnerColours;
 import ene.eneform.colours.bos.ENERegisteredColours;
 import ene.eneform.colours.bos.ENERegisteredOwner;
-import ene.eneform.colours.wikipedia.Wikipedia;
+import ene.eneform.colours.service.WikipediaService;
 import ene.eneform.mero.colours.ENERacingColours;
 import ene.eneform.mero.config.ENEColoursEnvironment;
 import ene.eneform.mero.parse.ENEColoursParser;
 import ene.eneform.smartform.bos.UnregisteredColourSyntax;
 import ene.eneform.smartform.factory.SmartformRunnerFactory;
 import ene.eneform.utils.ENEStatement;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -26,13 +28,17 @@ import java.util.Iterator;
  *
  * @author Simon
  */
+@Service
+@RequiredArgsConstructor
 public class RegisteredOwnerFactory {
-    
-    private static String getRCPVersion (String strVersion, String strOrganisation, String strOrgType, int nYear)
+    private final WikipediaService wikipediaService;
+    private final ColoursSearch coloursSearch;
+
+    private String getRCPVersion (String strVersion, String strOrganisation, String strOrgType, int nYear)
     {
         return strVersion + strOrganisation + strOrgType + String.valueOf(nYear);
     }
-    public static void parseRegisteredOwnerColours(ENEStatement statement, String strVersion, String strOrganisation, String strOrgType, int nYear)
+    public void parseRegisteredOwnerColours(ENEStatement statement, String strVersion, String strOrganisation, String strOrgType, int nYear)
     {
         // getRegisteredOwnerColours for 2011, getRegisteredOwnerColours1 for 1968
        // V3 does not require entries in the registered_owners table
@@ -51,7 +57,7 @@ public class RegisteredOwnerFactory {
             }
     	}
      }
-    public static void parseRegisteredFrenchOwnerColours(ENEStatement statement, String strVersion, String strFilter)
+    public void parseRegisteredFrenchOwnerColours(ENEStatement statement, String strVersion, String strFilter)
     {
         // getRegisteredOwnerColours for 2011, getRegisteredOwnerColours1 for 1968
        // V3 does not require entries in the registered_owners table
@@ -70,7 +76,7 @@ public class RegisteredOwnerFactory {
             }
     	}
      }
-    public static int generateSVGRegisteredOwnerFiles(ENEStatement statement, String strVersion, String strOrganisation, String strOrgType, int nYear, String strFormat)
+    public int generateSVGRegisteredOwnerFiles(ENEStatement statement, String strVersion, String strOrganisation, String strOrgType, int nYear, String strFormat)
     {
         int nCount = 0;
         String strRCPVersion = getRCPVersion(strVersion, strOrganisation, strOrgType, nYear);
@@ -103,7 +109,7 @@ public class RegisteredOwnerFactory {
                             ENEColoursEnvironment.getInstance().createSleeves("en",ucs.getSleeves()), 
                             ENEColoursEnvironment.getInstance().createCap("en",ucs.getCap()));
                             String strFileName = getOrganisationYearFileName(strOwnerId, strOrganisation, nYear);
-                            Wikipedia.createImageFile(strFileName, colours, "en", true, true);
+                            wikipediaService.createImageFile(strFileName, colours, "en", true, true);
                         }
                         else
                         {
@@ -138,7 +144,7 @@ public class RegisteredOwnerFactory {
        
          return nCount;
     }
-    public static ENERacingColours createRegisteredOwnerColours(ENEStatement statement, String strLanguage, String strJockeyColours, String strOrganisation, String strRCPVersion)
+    public ENERacingColours createRegisteredOwnerColours(ENEStatement statement, String strLanguage, String strJockeyColours, String strOrganisation, String strRCPVersion)
     {
         ENERacingColours colours = null;
         UnregisteredColourSyntax ucs = createRCPUnregisteredColourSyntax(statement, strJockeyColours, strOrganisation, strRCPVersion);
@@ -156,7 +162,7 @@ public class RegisteredOwnerFactory {
          
         return colours;
     }
-public static UnregisteredColourSyntax createRCPUnregisteredColourSyntax(ENEStatement statement, String strJockeyColours, String strOrganisation, String strRCPVersion)
+public UnregisteredColourSyntax createRCPUnregisteredColourSyntax(ENEStatement statement, String strJockeyColours, String strOrganisation, String strRCPVersion)
 {
     String strQuery = "select coalesce(wi2.wi_jacket, ucs_jacket) as ucs_jacket, coalesce(wi2.wi_sleeves, ucs_sleeves) as ucs_sleeves, coalesce(wi2.wi_cap, ucs_cap) as ucs_cap";
     strQuery += " from racing_colours_parse rcp";
@@ -184,7 +190,7 @@ public static UnregisteredColourSyntax createRCPUnregisteredColourSyntax(ENEStat
     
     return ucs;
 }
-public static void generateRegisteredOwnersSVG(ENEStatement statement, String strVersion, String strFormat) 
+public void generateRegisteredOwnersSVG(ENEStatement statement, String strVersion, String strFormat) 
     {
 /*       ENEColoursFactory.generateSVGRegisteredOwnerFiles(statement, "UK", "", 1912, strFormat); 
      ENEColoursFactory.generateSVGRegisteredOwnerFiles(statement, "UK", "", 1762, strFormat);
@@ -224,7 +230,7 @@ public static void generateRegisteredOwnersSVG(ENEStatement statement, String st
  //ENEColoursFactory.generateSVGRegisteredOwnerFiles(statement, "UK", "", 2015, strFormat); 
  generateSVGRegisteredOwnerFiles(statement, strVersion, "UK", "", 2016, strFormat); 
     }
-    private static ENERacingColours createRunnerColours(ENEOwnerColours ownercolours)
+    private ENERacingColours createRunnerColours(ENEOwnerColours ownercolours)
     {
         String strLanguage = ownercolours.getLanguage();
             String strJockeyColours = ownercolours.getColours();
@@ -250,7 +256,7 @@ public static void generateRegisteredOwnersSVG(ENEStatement statement, String st
             }
         return colours;
     }
-   public static ArrayList<ENERegisteredOwner> getRegisteredOwners(ENEStatement statement, String strOrganisation, String strOrgType, int nYear, String strFirstFilter, String strLastFilter)
+   public ArrayList<ENERegisteredOwner> getRegisteredOwners(ENEStatement statement, String strOrganisation, String strOrgType, int nYear, String strFirstFilter, String strLastFilter)
     {
        // 20121127- outer join with syntax table, don't need to check if can parse entries that have syntax specified
         String strLimit = ""; // " limit 100";
@@ -268,7 +274,7 @@ public static void generateRegisteredOwnersSVG(ENEStatement statement, String st
         System.out.println("parseRegisteredOwnerColours: " + strQuery + strWhere + strOrder + strLimit);
         return getRegisteredOwnerColoursStatement(statement, strQuery + strWhere + strOrder + strLimit);
     }
-   public static ArrayList<ENERegisteredOwner> getRegisteredFrenchOwnerColours(ENEStatement statement, String strLanguage, String strFirstFilter, String strLastFilter)
+   public ArrayList<ENERegisteredOwner> getRegisteredFrenchOwnerColours(ENEStatement statement, String strLanguage, String strFirstFilter, String strLastFilter)
     {
        // 20121127- outer join with syntax table, don't need to check if can parse entries that have syntax specified
         String strLimit = ""; // " limit 100";
@@ -282,7 +288,7 @@ public static void generateRegisteredOwnersSVG(ENEStatement statement, String st
         System.out.println("getRegisteredFrenchOwnerColours: " + strQuery + strWhere + strOrder + strLimit);
         return getRegisteredOwnerColoursStatement(statement, strQuery + strWhere + strOrder + strLimit);
     }
-   public static ArrayList<ENERegisteredOwner> getRegisteredOwnerColoursV3(ENEStatement statement, String strOrganisation, int nYear, String strFirstFilter, String strLastFilter)
+   public ArrayList<ENERegisteredOwner> getRegisteredOwnerColoursV3(ENEStatement statement, String strOrganisation, int nYear, String strFirstFilter, String strLastFilter)
     {
        // no join to registered_owners
         String strLimit = ""; // " limit 100";
@@ -297,7 +303,7 @@ public static void generateRegisteredOwnersSVG(ENEStatement statement, String st
         return getRegisteredOwnerColoursStatement(statement, strQuery + strWhere + strOrder + strLimit);
     }
  
-      public static ArrayList<ENERegisteredOwner> getRegisteredOwnerColoursStatement(ENEStatement statement, String strStatement)
+      public ArrayList<ENERegisteredOwner> getRegisteredOwnerColoursStatement(ENEStatement statement, String strStatement)
     {
        ArrayList<ENERegisteredOwner> lst = new ArrayList<ENERegisteredOwner>();
 
@@ -338,18 +344,18 @@ public static void generateRegisteredOwnersSVG(ENEStatement statement, String st
  
         return lst;
     }
-   public static ArrayList<ENEOwnerColours> getENEColoursRegisteredOwnerList(ENEStatement statement, String strOrganisation, String strOrgType, int nYear)
+   public ArrayList<ENEOwnerColours> getENEColoursRegisteredOwnerList(ENEStatement statement, String strOrganisation, String strOrgType, int nYear)
     {
 
-        String strWhere = ColoursSearch.getOwnerColoursWhereClause("ro_display_name", "", "", strOrganisation, strOrgType, nYear);
-        String strOrder = ColoursSearch.getOwnerColoursOrderClause("ro_item", "", "", strOrganisation, strOrgType, nYear);
+        String strWhere = coloursSearch.getOwnerColoursWhereClause("ro_display_name", "", "", strOrganisation, strOrgType, nYear);
+        String strOrder = coloursSearch.getOwnerColoursOrderClause("ro_item", "", "", strOrganisation, strOrgType, nYear);
         //strWhere += " and rc_item in (17657, 1930, 1328, 6950, 14686, 6944, 15533, 11041, 14168, 7644, 4103, 18529, 8803, 4587, 15841)";
         strWhere += " and ro_family_name like 'ab%'";
         // Those specified in syntax only FOR NOW
-        return ColoursSearch.findOwnerColours(statement, strWhere, "ro_display_name", strOrder, 1, 0, false);    // return all - no LIMIT
+        return coloursSearch.findOwnerColours(statement, strWhere, "ro_display_name", strOrder, 1, 0, false);    // return all - no LIMIT
     }
 
-    public static String getOrganisationYearFileName(String strFileName, String strOrganisation, int nYear) {
+    public String getOrganisationYearFileName(String strFileName, String strOrganisation, int nYear) {
         String strFullDirectory = ENEColoursEnvironment.getInstance().getVariable("SVG_OUTPUT_DIRECTORY") + ENEColoursEnvironment.getInstance().getVariable("SVG_IMAGE_PATH") + "organisations/" + strOrganisation + "/" + nYear + "/mero";
         String strFullFileName = strFullDirectory + "/" + strFileName + ".svg";
         return strFullFileName;

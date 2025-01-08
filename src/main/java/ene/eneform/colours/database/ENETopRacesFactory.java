@@ -7,12 +7,14 @@ package ene.eneform.colours.database;
 
 import ene.eneform.colours.bos.ENETopRace;
 import ene.eneform.colours.bos.ENETopRaceWinner;
-import ene.eneform.colours.wikipedia.Wikipedia;
+import ene.eneform.colours.service.WikipediaService;
 import ene.eneform.mero.colours.ENERacingColours;
 import ene.eneform.mero.config.ENEColoursEnvironment;
 import ene.eneform.mero.parse.ENEColoursParser;
 import ene.eneform.utils.DbUtils;
 import ene.eneform.utils.ENEStatement;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -25,9 +27,11 @@ import java.util.ArrayList;
  *
  * @author Simon
  */
+@Service
+@RequiredArgsConstructor
 public class ENETopRacesFactory {
-
-public static ENETopRace getTopRace(ENEStatement statement, int nRace)
+private final WikipediaService wikipediaService;
+public ENETopRace getTopRace(ENEStatement statement, int nRace)
 {
     ENETopRace race = null;
     Statement stmt = null;
@@ -60,7 +64,7 @@ public static ENETopRace getTopRace(ENEStatement statement, int nRace)
         }
         return race;
     }
-public static int countTopRaceWinners(ENEStatement statement, String strWhere)
+public int countTopRaceWinners(ENEStatement statement, String strWhere)
 {
     int nCount = -1;
          String strQuery = "select count(*) from top_historic_winners";
@@ -85,7 +89,7 @@ public static int countTopRaceWinners(ENEStatement statement, String strWhere)
     System.out.println("countTopRaceWinners: " + nCount);
             return nCount;
     }
-public static ArrayList<ENETopRaceWinner> getTopRaceWinners(ENEStatement statement, String strWhere, boolean bAscending, int nStart, int nMaxLimit)
+public ArrayList<ENETopRaceWinner> getTopRaceWinners(ENEStatement statement, String strWhere, boolean bAscending, int nStart, int nMaxLimit)
 {
     ArrayList<ENETopRaceWinner> alWinners = new ArrayList<ENETopRaceWinner>();
         String strQuery = "select thw_race_id, thw_year, thw_winner, thw_jockey, thw_trainer, thw_owner, thw_age, thw_gender, thw_colours, thw_dead_heat, thw_comments, thw_sire, thw_dam, thw_dam_sire, thw_colour, thw_bred, thw_foaling_year";
@@ -136,10 +140,10 @@ public static ArrayList<ENETopRaceWinner> getTopRaceWinners(ENEStatement stateme
         return alWinners;
     }
 
-    public static void generateSVGTopRaceWinners(ENEStatement statement, int nRace, String strWhere)
+    public void generateSVGTopRaceWinners(ENEStatement statement, int nRace, String strWhere)
     {
         String strWhere1 = getTopRaceWinnersWhereClause(nRace) + " " + strWhere;
-        ArrayList<ENETopRaceWinner> alWinners = ENETopRacesFactory.getTopRaceWinners(statement, strWhere1, true, 0, 0);
+        ArrayList<ENETopRaceWinner> alWinners = getTopRaceWinners(statement, strWhere1, true, 0, 0);
         System.out.println("generateSVGTopRaceWinners: " + nRace + " Number of colours: " + alWinners.size());
         // images should be named by race id and year
         //ENEColoursSVGFactory.createSVGTopRaceWinners(nRace, alWinners, ENEColoursEnvironment.DEFAULT_LANGUAGE);
@@ -152,7 +156,7 @@ public static ArrayList<ENETopRaceWinner> getTopRaceWinners(ENEStatement stateme
             try
             {
                 String strFileName = getTopRaceFileName(String.valueOf(nYear), nRace);
-                Wikipedia.createImageFile(strFileName, colours, "en", true, true);
+                wikipediaService.createImageFile(strFileName, colours, "en", true, true);
             }
             catch(FileNotFoundException e)
             {
@@ -165,12 +169,12 @@ public static ArrayList<ENETopRaceWinner> getTopRaceWinners(ENEStatement stateme
         }
 
      }  
-    public static String getTopRaceWinnersWhereClause(int nRace)
+    public String getTopRaceWinnersWhereClause(int nRace)
     {
         return ("thw_race_id = " + nRace);
     }
 
-    public static void generateAllSVGTopRaces(ENEStatement statement)
+    public void generateAllSVGTopRaces(ENEStatement statement)
     {
        for (int i = 1; i <= 10; i++)
         {
@@ -178,7 +182,7 @@ public static ArrayList<ENETopRaceWinner> getTopRaceWinners(ENEStatement stateme
         }
     }
 
-    public static String getTopRaceFileName(String strFileName, int nRace) {
+    public String getTopRaceFileName(String strFileName, int nRace) {
         String strFullDirectory = ENEColoursEnvironment.getInstance().getVariable("SVG_OUTPUT_DIRECTORY") + ENEColoursEnvironment.getInstance().getVariable("SVG_IMAGE_PATH") + "races/" + nRace + "/mero";
         String strFullFileName = strFullDirectory + "/" + strFileName + ".svg";
         return strFullFileName;

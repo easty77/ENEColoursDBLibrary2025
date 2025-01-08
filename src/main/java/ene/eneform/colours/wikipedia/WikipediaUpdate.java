@@ -4,15 +4,14 @@
  */
 package ene.eneform.colours.wikipedia;
 
+import ene.eneform.colours.database.*;
+import ene.eneform.colours.service.WikipediaService;
+import lombok.RequiredArgsConstructor;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import ene.eneform.colours.bos.AdditionalRaceData;
 import ene.eneform.colours.bos.AdditionalRaceWikipedia;
 import ene.eneform.colours.bos.ENEColoursDBEnvironment;
-import ene.eneform.colours.database.AdditionalRaceLinkFactory;
-import ene.eneform.colours.database.JCEventsFactory;
-import ene.eneform.colours.database.WikipediaFactory;
-import ene.eneform.colours.database.WikipediaImagesFactory;
 import ene.eneform.colours.web.atr.AtTheRacesRacecards;
 import ene.eneform.colours.web.rp.RacingPostCourse;
 import ene.eneform.colours.web.rp.RacingPostRaceSummary;
@@ -21,6 +20,7 @@ import ene.eneform.mero.config.ENEColoursEnvironment;
 import ene.eneform.smartform.bos.AdditionalRaceInstance;
 import ene.eneform.utils.ENEStatement;
 import ene.eneform.utils.ExecuteURL;
+import org.springframework.stereotype.Service;
 import org.wikipedia.*;
 
 import javax.security.auth.login.FailedLoginException;
@@ -40,18 +40,20 @@ import java.util.regex.Pattern;
  *
  * @author Simon
  */
+@Service
+@RequiredArgsConstructor
 public class WikipediaUpdate {
-
-private static Pattern sm_refRP = Pattern.compile("\\{\\{Racing Post[a-z0-9\\|\\-\\s]+\\}\\}");
-private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d]+\\/");
-    private static String sm_strUser = "JockeyColours";
-    private static String sm_strPassword = "thi1mat2";
-    private static String sm_strLicense = "{{self|cc-by-sa-4.0}}";
-    private static String[] sm_astrCategories = {"Racing silks"};
-    private static DateFormat sm_dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-    //private static String sm_strDirectory="D:\\Program Files\\apache-tomcat-7.0.30-windows-x64\\apache-tomcat-7.0.30\\webapps\\ROOT\\images\\colours\\svg\\wikipedia\\owners";
+    private final WikipediaService wikipediaService;
+private Pattern sm_refRP = Pattern.compile("\\{\\{Racing Post[a-z0-9\\|\\-\\s]+\\}\\}");
+private Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d]+\\/");
+    private String sm_strUser = "JockeyColours";
+    private String sm_strPassword = "thi1mat2";
+    private String sm_strLicense = "{{self|cc-by-sa-4.0}}";
+    private String[] sm_astrCategories = {"Racing silks"};
+    private DateFormat sm_dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+    //private String sm_strDirectory="D:\\Program Files\\apache-tomcat-7.0.30-windows-x64\\apache-tomcat-7.0.30\\webapps\\ROOT\\images\\colours\\svg\\wikipedia\\owners";
     
-    public static void updateWikipediaRaceRacingPostReferences(ENEStatement statement, List<AdditionalRaceData> lstARD, String strLanguage, boolean bUpdate) 
+    public void updateWikipediaRaceRacingPostReferences(ENEStatement statement, List<AdditionalRaceData> lstARD, String strLanguage, boolean bUpdate) 
     {
         try
         {
@@ -61,7 +63,7 @@ private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d
            {
                try
                {
-                    WikipediaUpdate.updateWikipediaRaceRacingPostReferences(statement, wiki, lstARD.get(i), "en", bUpdate);
+                    updateWikipediaRaceRacingPostReferences(statement, wiki, lstARD.get(i), "en", bUpdate);
                }
                catch(Exception e)
                {
@@ -80,7 +82,7 @@ private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d
                 System.out.append("updateWikipediaRace FailedLoginException: " + e.getMessage());
             }
     }
-    private static void updateWikipediaRaceRacingPostReferences(ENEStatement statement, Wiki wiki, AdditionalRaceData ard, String strLanguage, boolean bUpdate) 
+    private void updateWikipediaRaceRacingPostReferences(ENEStatement statement, Wiki wiki, AdditionalRaceData ard, String strLanguage, boolean bUpdate) 
             throws IOException, UnsupportedEncodingException, LoginException
     {
              String strPage = ard.getWikipedia(strLanguage).getWikipediaRef();
@@ -229,7 +231,7 @@ private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d
                 } 
             }
      }
-    public static void checkWikipediaRaceRacingPostReferences(ENEStatement statement, List<AdditionalRaceData> lstARD, String strLanguage, RacingPostCourse course, boolean bUpdate) 
+    public void checkWikipediaRaceRacingPostReferences(ENEStatement statement, List<AdditionalRaceData> lstARD, String strLanguage, RacingPostCourse course, boolean bUpdate) 
     {
         try
         {
@@ -239,7 +241,7 @@ private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d
            {
                try
                {
-                 WikipediaUpdate.checkWikipediaRaceRacingPostReferences(statement, wiki, lstARD.get(i), "en",  course, bUpdate);
+                 checkWikipediaRaceRacingPostReferences(statement, wiki, lstARD.get(i), "en",  course, bUpdate);
                }
                catch(Exception e)
                {
@@ -259,7 +261,7 @@ private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d
                 System.out.append("updateWikipediaRace FailedLoginException: " + e.getMessage());
             } 
     }
-    public static void checkWikipediaRaceRacingPostReferences(ENEStatement statement, Wiki wiki, AdditionalRaceData ard, String strLanguage, RacingPostCourse course, boolean bUpdate) 
+    public void checkWikipediaRaceRacingPostReferences(ENEStatement statement, Wiki wiki, AdditionalRaceData ard, String strLanguage, RacingPostCourse course, boolean bUpdate) 
             throws IOException, UnsupportedEncodingException, LoginException
     {
         String strPage = ard.getWikipedia(strLanguage).getWikipediaRef();
@@ -357,7 +359,7 @@ private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d
             }
         }
     }
-    public static void retrieveWikipediaRaceRacingPostReferences(ENEStatement statement, List<AdditionalRaceData> lstARD, String strLanguage) 
+    public void retrieveWikipediaRaceRacingPostReferences(ENEStatement statement, List<AdditionalRaceData> lstARD, String strLanguage) 
     {
         try
         {
@@ -367,7 +369,7 @@ private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d
            {
                try
                {
-                 WikipediaUpdate.retrieveWikipediaRaceRacingPostReferences(statement, wiki, lstARD.get(i), "en");
+                 retrieveWikipediaRaceRacingPostReferences(statement, wiki, lstARD.get(i), "en");
                }
                catch(Exception e)
                {
@@ -387,7 +389,7 @@ private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d
                 System.out.append("retrieveWikipediaRace FailedLoginException: " + e.getMessage());
             } 
     }
-    public static void retrieveWikipediaRaceRacingPostReferences(ENEStatement statement, Wiki wiki, AdditionalRaceData ard, String strLanguage) 
+    public void retrieveWikipediaRaceRacingPostReferences(ENEStatement statement, Wiki wiki, AdditionalRaceData ard, String strLanguage) 
             throws IOException, UnsupportedEncodingException, LoginException, ParseException
     {
             String strPage = ard.getWikipedia(strLanguage).getWikipediaRef();
@@ -443,7 +445,7 @@ private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d
                 }
             }
     }
-    public static String updateWikipediaRace(ENEStatement statement, AdditionalRaceData ard, String strLanguage, boolean bUpdate) 
+    public String updateWikipediaRace(ENEStatement statement, AdditionalRaceData ard, String strLanguage, boolean bUpdate) 
     {
         if (bUpdate)
         {
@@ -451,12 +453,12 @@ private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d
         }
         else    // just generate content (for testing)
         {
-            System.out.println(Wikipedia.generateRace(statement, ard.getName(), ENEColoursEnvironment.DEFAULT_LANGUAGE, "\n"));
+            System.out.println(wikipediaService.generateRace(ard.getName(), ENEColoursEnvironment.DEFAULT_LANGUAGE, "\n"));
             return null;    // no updated page
         }
     
     }
-    public static JSONObject updateWikipediaRaceURL(ENEStatement statement, JSONObject obj, boolean bZipped) {
+    public JSONObject updateWikipediaRaceURL(ENEStatement statement, JSONObject obj, boolean bZipped) {
         String strReturnURL = null;
         String strPage = obj.get("url").toString();
         String strLanguage = obj.get("language").toString();
@@ -515,7 +517,7 @@ private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d
         return obj;
         
     }
-    private static String updateWikipediaRaceURL(ENEStatement statement, AdditionalRaceData ard, String strLanguage) {
+    private String updateWikipediaRaceURL(ENEStatement statement, AdditionalRaceData ard, String strLanguage) {
         String strReturnURL = null;
         try {
             Wiki wiki = Wiki.newSession(strLanguage + ".wikipedia.org");
@@ -568,7 +570,7 @@ private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d
         
         return strReturnURL;
     }
-    private static JSONObject insertNewJockeyColoursRace(ENEStatement statement, JSONObject obj, String strContent)
+    private JSONObject insertNewJockeyColoursRace(ENEStatement statement, JSONObject obj, String strContent)
     {
             //System.out.println(strSection);
             // HTMLCleaner is no use as simply stored as text
@@ -584,7 +586,7 @@ private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d
                 int nCollapsible = strContent.indexOf("\n|}\n{{Jockey colours collapsible header}}");
                 if (nCollapsible >= 0)
                 {
-                    String strNewRace = Wikipedia.generateRace(statement, obj, ENEColoursEnvironment.DEFAULT_LANGUAGE, "\n");
+                    String strNewRace = wikipediaService.generateRace(obj, ENEColoursEnvironment.DEFAULT_LANGUAGE, "\n");
                     strNewRace = strNewRace.substring(0, strNewRace.length() - 1);
                     // 20210820 - only check first 34 chars i.e. up to "year = 2021"
                     if (strContent.indexOf(strNewRace.substring(0, 34)) < 0)
@@ -617,7 +619,7 @@ private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d
             
             return obj;
     }
-    private static String insertNewJockeyColoursRace(ENEStatement statement, AdditionalRaceData ard, String strContent)
+    private String insertNewJockeyColoursRace(ENEStatement statement, AdditionalRaceData ard, String strContent)
     {
             //System.out.println(strSection);
             // HTMLCleaner is no use as simply stored as text
@@ -635,7 +637,7 @@ private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d
                 {
                     String strCollapsible = strContent.substring(nCollapsible, nCollapsible + 41);
                     String strRest = strContent.substring(nCollapsible + 42);
-                    String strNewRace = Wikipedia.generateRace(statement, ard.getName(), ENEColoursEnvironment.DEFAULT_LANGUAGE, "\n");
+                    String strNewRace = wikipediaService.generateRace(ard.getName(), ENEColoursEnvironment.DEFAULT_LANGUAGE, "\n");
                     strNewRace = strNewRace.substring(0, strNewRace.length() - 1);
                     //System.out.println("new race: " + strNewRace);
 
@@ -647,12 +649,12 @@ private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d
             
             return null;
     }
-   public static void uploadWikimediaImage(String strOwner) {
+   public void uploadWikimediaImage(String strOwner) {
        String[] astrOwners = new String[1];
        astrOwners[0] = strOwner;
        uploadWikimediaImages(astrOwners);
    }
-   public static String uploadWikimediaImagesDate(ENEStatement statement, int nDayOffset, String strStartTime)
+   public String uploadWikimediaImagesDate(ENEStatement statement, int nDayOffset, String strStartTime)
    {
         ArrayList<String> alOwners = WikipediaImagesFactory.selectWikipediaOwnersByDate(statement, nDayOffset, strStartTime);
         String strContent = alOwners.size() + " owners";
@@ -660,7 +662,7 @@ private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d
         strContent += uploadWikimediaImages(alOwners.toArray(astrOwners));
        return strContent;
    }
-   public static String uploadWikimediaImagesLatest(ENEStatement statement)
+   public String uploadWikimediaImagesLatest(ENEStatement statement)
    {
        String strTimestamp = JCEventsFactory.getEventTimestamp(statement, "latest_wikipedia_images");
         ArrayList<String> alOwners = WikipediaImagesFactory.selectWikipediaOwnersLatest(statement, strTimestamp);
@@ -669,7 +671,7 @@ private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d
         strContent += uploadWikimediaImages(alOwners.toArray(astrOwners));
        return strContent;
    }
-   public static JSONObject updateWikipediaRacesDate(ENEStatement statement, int nDayOffset, String strWhere, boolean bUpdate)
+   public JSONObject updateWikipediaRacesDate(ENEStatement statement, int nDayOffset, String strWhere, boolean bUpdate)
    {
        JSONObject obj = new JSONObject();
        JSONArray pages = new JSONArray();
@@ -687,7 +689,7 @@ private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d
                 if (strReturnURL != null)
                     pages.put(strReturnURL);
                 else if (!bUpdate) // just generate content (for testing)
-                    System.out.println(Wikipedia.generateRace(statement, ard.getName(), ENEColoursEnvironment.DEFAULT_LANGUAGE, "\n"));
+                    System.out.println(wikipediaService.generateRace(ard.getName(), ENEColoursEnvironment.DEFAULT_LANGUAGE, "\n"));
             }
         }
         strLanguage="fr";
@@ -708,7 +710,7 @@ private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d
         }
         return obj;
    }
-   public static String uploadWikimediaImages(String[] astrOwners) {
+   public String uploadWikimediaImages(String[] astrOwners) {
        String strContent = "";
         try {
             Wiki wiki = Wiki.newSession("commons.wikimedia.org");
@@ -739,7 +741,7 @@ private static Pattern sm_refRPDate = Pattern.compile("\\/[\\d]+\\-[\\d]+\\-[\\d
         return strContent;
     }
 
-public static String getUploadTextCommons(String strDescription, String strAuthor, String strDate) {
+public String getUploadTextCommons(String strDescription, String strAuthor, String strDate) {
       String desc = "=={{int:filedesc}}==\n{{Information"
           + "\n|description = " + strDescription
           + "\n|date = " + strDate;
@@ -756,7 +758,7 @@ public static String getUploadTextCommons(String strDescription, String strAutho
       return desc;
     }
 
-    public static String getUploadCategories(String[] astrCategories) {
+    public String getUploadCategories(String[] astrCategories) {
         String strCategories = "";
         for(int j=0;j<astrCategories.length;++j) {
                 strCategories += "[[Category:" + astrCategories[j] + "]]\n";
