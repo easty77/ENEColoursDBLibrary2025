@@ -10,7 +10,7 @@ import ene.eneform.colours.database.ENERacingColoursFactory;
 import ene.eneform.colours.realsports.bettingpattern.RealSportsBettingPattern;
 import ene.eneform.colours.realsports.bettingpattern.RealSportsFrequencyBettingPattern;
 import ene.eneform.colours.realsports.results.RealSportsResultGenerator;
-import ene.eneform.mero.Mero;
+import ene.eneform.mero.service.MeroService;
 import ene.eneform.mero.colours.ENERacingColours;
 import ene.eneform.mero.config.ENEColoursEnvironment;
 import ene.eneform.smartform.bos.SmartformDailyRunner;
@@ -546,10 +546,13 @@ public static void generateImages(ENEStatement statement)
                     String strJockeyColours = colours.getDefinition();
                     //if (strJockeyColours.toLowerCase().indexOf("harlequin") >= 0)
                     //{
+                    /* FOR NOW 20250109
                         Mero.generateSVG(strJockeyColours, strRaceDirectory, nRace + "S-" + String.valueOf(i+1), null, new Point(0, -20), true);
                         Mero.generatePNG(strJockeyColours, strRaceDirectory, nRace + "S-" + String.valueOf(i+1), null, new Point(0, -20), true);
                         Mero.generateSVG(strJockeyColours, strRaceDirectory, nRace + "R-" + String.valueOf(nRunners - i), null, new Point(0, -20), true);
                         Mero.generatePNG(strJockeyColours, strRaceDirectory, nRace + "R-" + String.valueOf(nRunners - i), null, new Point(0, -20), true);
+
+                     */
                         //Mero.generateSVG(strJockeyColours, strRaceDirectory + "/side", String.valueOf(i+1), "white", new Point(130, 90),true);  // cap at side
                     //}
                 }
